@@ -1,0 +1,12 @@
+.DS_Store
+*.log
+dist/
+coverage.out
+coverage.html
+encoder_coverage.out
+*.prof
+test.bin
+jj
+final_decoder
+.vscode/
+.serena/
