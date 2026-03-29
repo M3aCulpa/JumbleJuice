@@ -80,6 +80,9 @@ func (g *GoEmitter) decoder(encoded encoder.Encoded) string {
 	switch encoded.Name {
 	case "hex", "dec":
 		return `func decode() []byte {
+	if len(data) < dataOriginalSize {
+		return data
+	}
 	return data[:dataOriginalSize]
 }
 `
@@ -97,7 +100,10 @@ func (g *GoEmitter) decoder(encoded encoder.Encoded) string {
 	result := make([]byte, 0, len(data)*4)
 	for _, addr := range data {
 		for _, part := range strings.Split(addr, ".") {
-			b, _ := strconv.Atoi(part)
+			b, err := strconv.Atoi(part)
+			if err != nil {
+				panic("invalid IPv4 octet: " + part)
+			}
 			result = append(result, byte(b))
 		}
 	}
@@ -105,12 +111,14 @@ func (g *GoEmitter) decoder(encoded encoder.Encoded) string {
 }
 `
 	case "ipv6", "mac":
-		// both strip colons and decode hex pairs
 		return `func decode() []byte {
 	result := make([]byte, 0, len(data)*16)
 	for _, addr := range data {
 		cleaned := strings.ReplaceAll(addr, ":", "")
-		b, _ := hex.DecodeString(cleaned)
+		b, err := hex.DecodeString(cleaned)
+		if err != nil {
+			panic("invalid hex in address: " + addr)
+		}
 		result = append(result, b...)
 	}
 	return result[:dataOriginalSize]

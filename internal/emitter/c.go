@@ -147,9 +147,9 @@ size_t decode(unsigned char* dst, size_t dst_len) {
     size_t out = 0;
     for (size_t i = 0; i < data_count; i++) {
         const char* s = data[i];
-        char hex[33];
+        char hex[65];
         int h = 0;
-        while (*s && h < 32) {
+        while (*s && h < 64) {
             if (*s != ':') hex[h++] = *s;
             s++;
         }

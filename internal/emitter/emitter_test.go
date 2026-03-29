@@ -14,7 +14,7 @@ func ipv4Encoded() encoder.Encoded {
 		Name:     "ipv4",
 		Chunks:   []string{"72.101.108.108", "111.0.0.0"},
 		Size:     5,
-		Checksum: "abc123",
+		Checksum: "", // emitter tests don't verify checksums
 	}
 }
 
@@ -43,7 +43,10 @@ func TestRawMode(t *testing.T) {
 	enc := ipv4Encoded()
 	for _, lang := range allLanguages {
 		t.Run(lang, func(t *testing.T) {
-			e, _ := GetEmitter(lang)
+			e, err := GetEmitter(lang)
+			if err != nil {
+				t.Fatalf("GetEmitter(%s): %v", lang, err)
+			}
 			code, err := e.Emit(enc, true)
 			if err != nil {
 				t.Fatalf("Emit(): %v", err)
@@ -63,11 +66,20 @@ func TestRawMode(t *testing.T) {
 
 func TestAllCombinations(t *testing.T) {
 	for _, encName := range allEncoders {
-		enc, _ := encoder.GetEncoder(encName)
-		encoded, _ := enc.Encode([]byte("Hello, World!"))
+		enc, err := encoder.GetEncoder(encName)
+		if err != nil {
+			t.Fatalf("GetEncoder(%s): %v", encName, err)
+		}
+		encoded, err := enc.Encode([]byte("Hello, World!"))
+		if err != nil {
+			t.Fatalf("Encode(%s): %v", encName, err)
+		}
 		for _, lang := range allLanguages {
 			t.Run(encName+"+"+lang, func(t *testing.T) {
-				e, _ := GetEmitter(lang)
+				e, err := GetEmitter(lang)
+				if err != nil {
+					t.Fatalf("GetEmitter(%s): %v", lang, err)
+				}
 				code, err := e.Emit(encoded, false)
 				if err != nil {
 					t.Fatalf("Emit(): %v", err)
@@ -82,11 +94,20 @@ func TestAllCombinations(t *testing.T) {
 
 func TestEmptyInput(t *testing.T) {
 	for _, encName := range allEncoders {
-		enc, _ := encoder.GetEncoder(encName)
-		encoded, _ := enc.Encode([]byte{})
+		enc, err := encoder.GetEncoder(encName)
+		if err != nil {
+			t.Fatalf("GetEncoder(%s): %v", encName, err)
+		}
+		encoded, err := enc.Encode([]byte{})
+		if err != nil {
+			t.Fatalf("Encode(%s): %v", encName, err)
+		}
 		for _, lang := range allLanguages {
 			t.Run(encName+"+"+lang, func(t *testing.T) {
-				e, _ := GetEmitter(lang)
+				e, err := GetEmitter(lang)
+				if err != nil {
+					t.Fatalf("GetEmitter(%s): %v", lang, err)
+				}
 				code, err := e.Emit(encoded, false)
 				if err != nil {
 					t.Fatalf("Emit(): %v", err)
@@ -100,16 +121,12 @@ func TestEmptyInput(t *testing.T) {
 }
 
 func TestRegistry(t *testing.T) {
-	registered := ListEmitters()
+	registered := make(map[string]bool)
+	for _, r := range ListEmitters() {
+		registered[r] = true
+	}
 	for _, name := range allLanguages {
-		found := false
-		for _, r := range registered {
-			if r == name {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !registered[name] {
 			t.Errorf("emitter %s not registered", name)
 		}
 	}

@@ -39,7 +39,7 @@ func (n *NimEmitter) data(encoded encoder.Encoded) string {
 	var sb strings.Builder
 
 	switch encoded.Name {
-	case "hex", "dec":
+	case "hex":
 		sb.WriteString("let data: seq[byte] = @[\n")
 		for i, chunk := range encoded.Chunks {
 			if i > 0 {
@@ -47,6 +47,23 @@ func (n *NimEmitter) data(encoded encoder.Encoded) string {
 			}
 			sb.WriteString("    ")
 			sb.WriteString(chunk)
+		}
+		sb.WriteString("\n]\n")
+
+	case "dec":
+		// nim requires explicit .byte suffix for int-to-byte narrowing
+		sb.WriteString("let data: seq[byte] = @[\n")
+		for i, chunk := range encoded.Chunks {
+			if i > 0 {
+				sb.WriteString(",\n")
+			}
+			sb.WriteString("    ")
+			// append .byte to each decimal value
+			parts := strings.Split(chunk, ", ")
+			for j, p := range parts {
+				parts[j] = strings.TrimSpace(p) + ".byte"
+			}
+			sb.WriteString(strings.Join(parts, ", "))
 		}
 		sb.WriteString("\n]\n")
 
@@ -81,12 +98,15 @@ func (n *NimEmitter) decoder(encoded encoder.Encoded) string {
 	switch encoded.Name {
 	case "hex", "dec":
 		return `proc decode(): seq[byte] =
-    data[0 ..< dataOriginalSize]
+    let n = min(dataOriginalSize, data.len)
+    data[0 ..< n]
 `
 	case "b64":
 		return `proc decode(): seq[byte] =
     let decoded = base64.decode(data)
-    cast[seq[byte]](decoded[0 ..< dataOriginalSize])
+    result = newSeq[byte](dataOriginalSize)
+    for i in 0 ..< dataOriginalSize:
+        result[i] = byte(decoded[i])
 `
 	case "ipv4":
 		return `proc decode(): seq[byte] =
@@ -99,7 +119,6 @@ func (n *NimEmitter) decoder(encoded encoder.Encoded) string {
             offset.inc
 `
 	case "ipv6", "mac":
-		// both strip colons and parse hex pairs
 		return `proc decode(): seq[byte] =
     result = newSeq[byte](dataOriginalSize)
     var offset = 0
@@ -108,7 +127,7 @@ func (n *NimEmitter) decoder(encoded encoder.Encoded) string {
         var i = 0
         while i + 1 < cleaned.len:
             if offset >= dataOriginalSize: return
-            result[offset] = byte(parseHexInt(cleaned[i .. i + 1]))
+            result[offset] = fromHex[uint8](cleaned[i ..< i + 2])
             offset.inc
             i += 2
 `

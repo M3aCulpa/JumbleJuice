@@ -11,8 +11,8 @@ func TestReadInput(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	testData := []byte("Hello, JumbleJuice!")
 
-	if err := os.WriteFile(testFile, testData, 0644); err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
+	if err := os.WriteFile(testFile, testData, 0600); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
 	}
 
 	data, err := ReadInput(testFile)
@@ -29,13 +29,19 @@ func TestReadInput(t *testing.T) {
 	}
 }
 
+func TestReadInputDirectory(t *testing.T) {
+	_, err := ReadInput(t.TempDir())
+	if err == nil {
+		t.Error("ReadInput() should error on directory")
+	}
+}
+
 func TestSHA256Hex(t *testing.T) {
 	hash := SHA256Hex([]byte("hello"))
 	if len(hash) != 64 {
 		t.Errorf("SHA256Hex() length = %d, want 64", len(hash))
 	}
 
-	// same input should produce same hash
 	hash2 := SHA256Hex([]byte("hello"))
 	if hash != hash2 {
 		t.Error("SHA256Hex() not deterministic")

@@ -6,10 +6,9 @@
 # variables
 BINARY_NAME := jj
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 GOFILES := $(shell find . -name "*.go" -type f)
 PACKAGES := $(shell go list ./...)
-LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
+LDFLAGS := -ldflags "-X main.Version=$(VERSION)"
 
 # colors for output
 RED := \033[0;31m
@@ -33,9 +32,6 @@ help:
 setup:
 	@echo "$(GREEN)Setting up development environment...$(NC)"
 	go mod download
-	go install github.com/spf13/cobra@latest
-	go install github.com/spf13/viper@latest
-	go install github.com/stretchr/testify@latest
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@echo "$(GREEN)Setup complete!$(NC)"
@@ -49,12 +45,7 @@ build:
 ## test: run all tests
 test:
 	@echo "$(GREEN)Running tests...$(NC)"
-	@if command -v go &> /dev/null; then \
-		go test -v -race -timeout 30s $(PACKAGES); \
-	else \
-		echo "$(YELLOW)Go not installed - running simulation tests$(NC)"; \
-		./run_tests.sh; \
-	fi
+	go test -v -race -timeout 30s $(PACKAGES)
 	@echo "$(GREEN)Tests complete!$(NC)"
 
 ## test-short: run short tests only
@@ -74,12 +65,6 @@ coverage:
 bench:
 	@echo "$(GREEN)Running benchmarks...$(NC)"
 	go test -bench=. -benchmem -timeout 10m $(PACKAGES)
-
-## fuzz: run fuzz tests
-fuzz:
-	@echo "$(GREEN)Running fuzz tests...$(NC)"
-	go test -fuzz=FuzzEncoders -fuzztime=30s ./internal/encoder
-	go test -fuzz=FuzzEmitters -fuzztime=30s ./internal/emitter
 
 ## lint: run linters
 lint:
@@ -110,7 +95,7 @@ clean:
 	rm -f $(BINARY_NAME)
 	rm -f coverage.out coverage.html
 	rm -rf dist/
-	go clean -cache
+	go clean
 	@echo "$(GREEN)Clean complete!$(NC)"
 
 ## install: install binary to /usr/local/bin
@@ -210,7 +195,6 @@ update:
 ## version: show version information
 version:
 	@echo "Version: $(VERSION)"
-	@echo "Build Time: $(BUILD_TIME)"
 	@echo "Go Version: $(shell go version)"
 
 ## stats: show code statistics
@@ -232,9 +216,9 @@ examples:
 	@mkdir -p examples/output
 	@if [ -f $(BINARY_NAME) ]; then \
 		echo "test data" > examples/test.bin; \
-		./$(BINARY_NAME) emit --in examples/test.bin --encoder hex > examples/output/hex.go; \
-		./$(BINARY_NAME) emit --in examples/test.bin --encoder b64 > examples/output/b64.go; \
-		./$(BINARY_NAME) emit --in examples/test.bin --encoder dec > examples/output/dec.go; \
+		./$(BINARY_NAME) -i examples/test.bin -e hex -t go > examples/output/hex.go; \
+		./$(BINARY_NAME) -i examples/test.bin -e b64 -t go > examples/output/b64.go; \
+		./$(BINARY_NAME) -i examples/test.bin -e dec -t go > examples/output/dec.go; \
 		echo "$(GREEN)Examples created in examples/output/$(NC)"; \
 	else \
 		echo "$(RED)Build the binary first with 'make build'$(NC)"; \

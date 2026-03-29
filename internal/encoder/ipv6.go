@@ -3,7 +3,6 @@ package encoder
 import (
 	"encoding/hex"
 	"fmt"
-	"net"
 	"strings"
 )
 
@@ -28,24 +27,13 @@ func (e *IPv6Encoder) Encode(data []byte) (Encoded, error) {
 		chunk := make([]byte, chunkSize)
 		copy(chunk, data[i:end])
 
-		ip := net.IP(chunk)
-		addr := ip.String()
-
-		// net.IP may produce ipv4-mapped notation; fall back to manual formatting
-		if addr == "" || strings.Contains(addr, ".") {
-			var parts []string
-			for j := 0; j < 16; j += 2 {
-				part := fmt.Sprintf("%02x%02x", chunk[j], chunk[j+1])
-				part = strings.TrimLeft(part, "0")
-				if part == "" {
-					part = "0"
-				}
-				parts = append(parts, part)
-			}
-			addr = compressIPv6(strings.Join(parts, ":"))
+		// always emit fully-expanded notation so emitted decoders can
+		// strip colons and parse hex pairs without needing :: expansion
+		parts := make([]string, 8)
+		for j := 0; j < 16; j += 2 {
+			parts[j/2] = fmt.Sprintf("%02x%02x", chunk[j], chunk[j+1])
 		}
-
-		chunks = append(chunks, addr)
+		chunks = append(chunks, strings.Join(parts, ":"))
 	}
 
 	return Encoded{
@@ -81,6 +69,9 @@ func (e *IPv6Encoder) Decode(encoded Encoded) ([]byte, error) {
 		}
 	}
 
+	if encoded.Size > int64(len(result)) {
+		return nil, fmt.Errorf("decoded %d bytes but expected %d", len(result), encoded.Size)
+	}
 	if encoded.Size > 0 && encoded.Size < int64(len(result)) {
 		result = result[:encoded.Size]
 	}
@@ -91,48 +82,6 @@ func (e *IPv6Encoder) Decode(encoded Encoded) ([]byte, error) {
 	return result, nil
 }
 
-// replaces the longest run of consecutive "0" groups with "::".
-func compressIPv6(addr string) string {
-	parts := strings.Split(addr, ":")
-
-	maxStart, maxLen := -1, 0
-	curStart, curLen := -1, 0
-
-	for i, part := range parts {
-		if part == "0" {
-			if curStart == -1 {
-				curStart = i
-				curLen = 1
-			} else {
-				curLen++
-			}
-			if curLen > maxLen {
-				maxStart = curStart
-				maxLen = curLen
-			}
-		} else {
-			curStart = -1
-			curLen = 0
-		}
-	}
-
-	if maxLen < 2 {
-		return addr
-	}
-	if maxLen == len(parts) {
-		return "::"
-	}
-
-	left := parts[:maxStart]
-	right := parts[maxStart+maxLen:]
-
-	var sb strings.Builder
-	sb.WriteString(strings.Join(left, ":"))
-	sb.WriteString("::")
-	sb.WriteString(strings.Join(right, ":"))
-	return sb.String()
-}
-
 // expands compressed ipv6 notation to 8 colon-separated groups.
 func expandIPv6(addr string) string {
 	if !strings.Contains(addr, "::") {
@@ -140,6 +89,9 @@ func expandIPv6(addr string) string {
 	}
 
 	halves := strings.Split(addr, "::")
+	if len(halves) > 2 {
+		return addr // malformed: multiple :: present
+	}
 	left := splitNonEmpty(halves[0], ":")
 	right := []string{}
 	if len(halves) > 1 && halves[1] != "" {

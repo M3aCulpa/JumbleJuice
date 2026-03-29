@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,16 +25,15 @@ func ValidateIPv4(addr string) error {
 	return nil
 }
 
-// validates mac address format
+// validates mac address format (colon or dash delimited)
 func ValidateMAC(addr string) error {
 	cleaned := strings.ReplaceAll(addr, ":", "")
+	cleaned = strings.ReplaceAll(cleaned, "-", "")
 	if len(cleaned) != 12 {
 		return fmt.Errorf("invalid MAC: expected 12 hex chars, got %d", len(cleaned))
 	}
-	for i, c := range cleaned {
-		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
-			return fmt.Errorf("invalid MAC: non-hex character at position %d", i)
-		}
+	if _, err := hex.DecodeString(cleaned); err != nil {
+		return fmt.Errorf("invalid MAC: %w", err)
 	}
 	return nil
 }

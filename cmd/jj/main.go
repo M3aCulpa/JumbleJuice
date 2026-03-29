@@ -16,8 +16,8 @@ var Version = "0.3.0"
 
 func main() {
 	input := flag.String("i", "", "Input file (use - for stdin)")
-	enc := flag.String("e", "ipv4", "Encoder: hex, b64, dec, ipv4, ipv6, mac")
-	lang := flag.String("t", "c", "Language: c, csharp, go, python, rust, nim")
+	enc := flag.String("e", "ipv4", "Encoder (see list below)")
+	lang := flag.String("t", "c", "Language (see list below)")
 	output := flag.String("o", "", "Output file (default: stdout)")
 	raw := flag.Bool("raw", false, "Output data blob only, no decoder or imports")
 	help := flag.Bool("h", false, "Show help")
@@ -27,7 +27,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "JumbleJuice - Binary Payload Encoder\n")
 		fmt.Fprintf(os.Stderr, "Usage: jj -i <input> [-e encoder] [-t language] [-o file] [--raw]\n\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nEncoders:  hex, b64, dec, ipv4, ipv6, mac\n")
+		fmt.Fprintf(os.Stderr, "\nEncoders:  %s\n", strings.Join(listEncoders(), ", "))
 		fmt.Fprintf(os.Stderr, "Languages: %s\n", strings.Join(listEmitters(), ", "))
 	}
 
@@ -54,7 +54,7 @@ func main() {
 	}
 
 	if *output != "" {
-		if err := os.WriteFile(*output, []byte(code), 0644); err != nil {
+		if err := os.WriteFile(*output, []byte(code), 0600); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -88,6 +88,12 @@ func run(inputFile, encoderName, langName string, raw bool) (string, error) {
 	}
 
 	return emit.Emit(encoded, raw)
+}
+
+func listEncoders() []string {
+	names := encoder.ListEncoders()
+	sort.Strings(names)
+	return names
 }
 
 func listEmitters() []string {

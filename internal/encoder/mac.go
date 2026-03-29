@@ -62,6 +62,9 @@ func (m *MACEncoder) Decode(encoded Encoded) ([]byte, error) {
 		result = append(result, b...)
 	}
 
+	if encoded.Size > int64(len(result)) {
+		return nil, fmt.Errorf("decoded %d bytes but expected %d", len(result), encoded.Size)
+	}
 	if encoded.Size > 0 && encoded.Size < int64(len(result)) {
 		result = result[:encoded.Size]
 	}

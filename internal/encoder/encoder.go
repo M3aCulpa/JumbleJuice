@@ -27,10 +27,13 @@ var (
 	mu       sync.RWMutex
 )
 
-// adds an encoder to the registry
+// adds an encoder to the registry. panics on duplicate names.
 func Register(encoder Encoder) {
 	mu.Lock()
 	defer mu.Unlock()
+	if _, exists := encoders[encoder.Name()]; exists {
+		panic(fmt.Sprintf("encoder already registered: %s", encoder.Name()))
+	}
 	encoders[encoder.Name()] = encoder
 }
 
@@ -67,6 +70,9 @@ func Checksum(data []byte) string {
 // validates decoded data against expected checksum.
 func verifyChecksum(data []byte, expected string) error {
 	if expected == "" {
+		if len(data) > 0 {
+			return fmt.Errorf("checksum missing for non-empty data")
+		}
 		return nil
 	}
 	actual := Checksum(data)

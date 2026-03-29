@@ -86,18 +86,18 @@ func TestMACChunkValues(t *testing.T) {
 	}
 }
 
-func TestIPv6Compression(t *testing.T) {
-	tests := []struct{ input, want string }{
-		{"1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8"},
-		{"1:0:0:0:0:0:0:8", "1::8"},
-		{"0:0:0:0:0:0:0:0", "::"},
-		{"1:0:0:4:0:0:0:8", "1:0:0:4::8"},
-		{"0:0:0:0:0:0:0:1", "::1"},
+func TestIPv6FullExpansion(t *testing.T) {
+	enc := &IPv6Encoder{}
+	// all zeros should produce fully expanded form, not ::
+	encoded, err := enc.Encode([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	if err != nil {
+		t.Fatalf("Encode(): %v", err)
 	}
-	for _, tt := range tests {
-		if got := compressIPv6(tt.input); got != tt.want {
-			t.Errorf("compressIPv6(%s) = %s, want %s", tt.input, got, tt.want)
-		}
+	if len(encoded.Chunks) != 1 {
+		t.Fatalf("expected 1 chunk, got %d", len(encoded.Chunks))
+	}
+	if encoded.Chunks[0] != "0000:0000:0000:0000:0000:0000:0000:0000" {
+		t.Errorf("expected fully expanded zeros, got %s", encoded.Chunks[0])
 	}
 }
 
@@ -117,18 +117,12 @@ func TestIPv6Expansion(t *testing.T) {
 }
 
 func TestRegistry(t *testing.T) {
-	expected := []string{"hex", "b64", "dec", "ipv4", "ipv6", "mac"}
-	registered := ListEncoders()
-
-	for _, name := range expected {
-		found := false
-		for _, r := range registered {
-			if r == name {
-				found = true
-				break
-			}
-		}
-		if !found {
+	registered := make(map[string]bool)
+	for _, r := range ListEncoders() {
+		registered[r] = true
+	}
+	for _, name := range []string{"hex", "b64", "dec", "ipv4", "ipv6", "mac"} {
+		if !registered[name] {
 			t.Errorf("encoder %s not registered", name)
 		}
 	}

@@ -7,12 +7,17 @@ import (
 	"testing"
 )
 
-func TestRun(t *testing.T) {
-	tmpDir := t.TempDir()
-	inputFile := filepath.Join(tmpDir, "test.bin")
-	os.WriteFile(inputFile, []byte("Hello, World!"), 0644)
+func writeTempInput(t *testing.T, content []byte) string {
+	t.Helper()
+	f := filepath.Join(t.TempDir(), "input.bin")
+	if err := os.WriteFile(f, content, 0600); err != nil {
+		t.Fatalf("failed to write test input: %v", err)
+	}
+	return f
+}
 
-	code, err := run(inputFile, "ipv4", "c", false)
+func TestRun(t *testing.T) {
+	code, err := run(writeTempInput(t, []byte("Hello, World!")), "ipv4", "c", false)
 	if err != nil {
 		t.Fatalf("run(): %v", err)
 	}
@@ -25,11 +30,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunRaw(t *testing.T) {
-	tmpDir := t.TempDir()
-	inputFile := filepath.Join(tmpDir, "test.bin")
-	os.WriteFile(inputFile, []byte("Hello, World!"), 0644)
-
-	code, err := run(inputFile, "ipv4", "c", true)
+	code, err := run(writeTempInput(t, []byte("Hello, World!")), "ipv4", "c", true)
 	if err != nil {
 		t.Fatalf("run(): %v", err)
 	}
@@ -39,11 +40,7 @@ func TestRunRaw(t *testing.T) {
 }
 
 func TestRunEmptyInput(t *testing.T) {
-	tmpDir := t.TempDir()
-	inputFile := filepath.Join(tmpDir, "empty.bin")
-	os.WriteFile(inputFile, []byte{}, 0644)
-
-	code, err := run(inputFile, "ipv4", "c", false)
+	code, err := run(writeTempInput(t, []byte{}), "ipv4", "c", false)
 	if err != nil {
 		t.Fatalf("run(): %v", err)
 	}
@@ -53,22 +50,14 @@ func TestRunEmptyInput(t *testing.T) {
 }
 
 func TestRunInvalidEncoder(t *testing.T) {
-	tmpDir := t.TempDir()
-	inputFile := filepath.Join(tmpDir, "test.bin")
-	os.WriteFile(inputFile, []byte("test"), 0644)
-
-	_, err := run(inputFile, "invalid", "c", false)
+	_, err := run(writeTempInput(t, []byte("test")), "invalid", "c", false)
 	if err == nil {
 		t.Error("expected error for invalid encoder")
 	}
 }
 
 func TestRunInvalidLanguage(t *testing.T) {
-	tmpDir := t.TempDir()
-	inputFile := filepath.Join(tmpDir, "test.bin")
-	os.WriteFile(inputFile, []byte("test"), 0644)
-
-	_, err := run(inputFile, "ipv4", "invalid", false)
+	_, err := run(writeTempInput(t, []byte("test")), "ipv4", "invalid", false)
 	if err == nil {
 		t.Error("expected error for invalid language")
 	}

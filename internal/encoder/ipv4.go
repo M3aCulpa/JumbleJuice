@@ -44,19 +44,25 @@ func (e *IPv4Encoder) Decode(encoded Encoded) ([]byte, error) {
 		return nil, fmt.Errorf("invalid encoder: expected %s, got %s", e.Name(), encoded.Name)
 	}
 
-	var result []byte
+	result := make([]byte, 0, encoded.Size)
 
 	for _, addr := range encoded.Chunks {
-		if err := ValidateIPv4(addr); err != nil {
-			return nil, fmt.Errorf("decode failed: %w", err)
+		parts := strings.Split(addr, ".")
+		if len(parts) != 4 {
+			return nil, fmt.Errorf("invalid IPv4: expected 4 octets in %q", addr)
 		}
-		for _, part := range strings.Split(addr, ".") {
-			octet, _ := strconv.Atoi(part)
+		for _, part := range parts {
+			octet, err := strconv.ParseUint(part, 10, 8)
+			if err != nil {
+				return nil, fmt.Errorf("invalid IPv4 octet %q in %s: %w", part, addr, err)
+			}
 			result = append(result, byte(octet))
 		}
 	}
 
-	// trim padding
+	if encoded.Size > int64(len(result)) {
+		return nil, fmt.Errorf("decoded %d bytes but expected %d", len(result), encoded.Size)
+	}
 	if encoded.Size > 0 && encoded.Size < int64(len(result)) {
 		result = result[:encoded.Size]
 	}

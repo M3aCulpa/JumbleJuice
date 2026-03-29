@@ -17,9 +17,13 @@ var (
 	mu       sync.RWMutex
 )
 
+// registers an emitter. panics on duplicate language names.
 func Register(emitter Emitter) {
 	mu.Lock()
 	defer mu.Unlock()
+	if _, exists := emitters[emitter.Language()]; exists {
+		panic(fmt.Sprintf("emitter already registered: %s", emitter.Language()))
+	}
 	emitters[emitter.Language()] = emitter
 }
 

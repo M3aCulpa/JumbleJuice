@@ -16,7 +16,7 @@ func (r *RustEmitter) Emit(encoded encoder.Encoded, raw bool) (string, error) {
 	}
 	var sb strings.Builder
 	sb.WriteString("// === imports ===\n")
-	sb.WriteString(r.imports())
+	sb.WriteString(r.imports(encoded))
 	sb.WriteString("\n// === data ===\n")
 	sb.WriteString(r.data(encoded))
 	sb.WriteString("\n// === decoder ===\n")
@@ -24,7 +24,7 @@ func (r *RustEmitter) Emit(encoded encoder.Encoded, raw bool) (string, error) {
 	return sb.String(), nil
 }
 
-func (r *RustEmitter) imports() string {
+func (r *RustEmitter) imports(encoded encoder.Encoded) string {
 	return "// (no imports required)\n"
 }
 
@@ -64,7 +64,8 @@ func (r *RustEmitter) decoder(encoded encoder.Encoded) string {
 	switch encoded.Name {
 	case "hex", "dec":
 		return `fn decode() -> Vec<u8> {
-    DATA[..DATA_ORIGINAL_SIZE].to_vec()
+    let n = DATA.len().min(DATA_ORIGINAL_SIZE);
+    DATA[..n].to_vec()
 }
 `
 	case "b64":

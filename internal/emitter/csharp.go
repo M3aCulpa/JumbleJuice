@@ -82,8 +82,9 @@ func (cs *CSharpEmitter) decoder(encoded encoder.Encoded) string {
 	switch encoded.Name {
 	case "hex", "dec":
 		return `static byte[] Decode() {
-    byte[] result = new byte[dataOriginalSize];
-    Array.Copy(data, result, dataOriginalSize);
+    int n = Math.Min(data.Length, dataOriginalSize);
+    byte[] result = new byte[n];
+    Array.Copy(data, result, n);
     return result;
 }
 `
