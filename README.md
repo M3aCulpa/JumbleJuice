@@ -2,6 +2,8 @@
 
 Binary payload encoder for red team operations. Feed it shellcode, pick an encoding scheme and a target language, and get back a ready-to-paste code snippet with the encoded data, a decoder function, and the required imports.
 
+Inspired by [HellShell](https://github.com/NUL0x4C/HellShell), rebuilt from scratch in Go to support more encoders, more languages, and a simpler workflow.
+
 **6 encoders** (hex, base64, decimal, IPv4, IPv6, MAC) x **6 languages** (C, C#, Go, Python, Rust, Nim) = 36 combinations out of the box.
 
 Zero external dependencies. Single static binary.
