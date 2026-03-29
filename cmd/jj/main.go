@@ -12,7 +12,7 @@ import (
 	"jumblejuice/internal/emitter"
 )
 
-var Version = "0.3.0"
+var Version = "0.4.0"
 
 func main() {
 	input := flag.String("i", "", "Input file (use - for stdin)")
